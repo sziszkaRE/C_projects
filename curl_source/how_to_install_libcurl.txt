@@ -1,0 +1,2 @@
+./conifigure # retrive the system informations (platform informations, compiler infos .etc) and sets the compiler and linker flags accordingly.
+make install # creates libcurl library under /usr/local/libs in cygwin (in case of windows) or in linux
