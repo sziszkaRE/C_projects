@@ -1,5 +1,5 @@
 /*
- * main.h
+ * concurrentWebCrawler.h
  *
  *  Created on: May 5, 2015
  *      Author: Szilard Ratting

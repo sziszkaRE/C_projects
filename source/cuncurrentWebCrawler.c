@@ -4,7 +4,7 @@
 #include <curl/curl.h> /* due to HTML functions */
 #include <pthread.h>   /* due to concurrency handling */
 #include <regex.h>     /* due to parsing HTML */
-#include "concurrentWebCrawler.h"
+#include "concurrentWebCrawler.h" /* due to the my own type definitions */
 
 
 /* Constants definitions */
@@ -20,7 +20,6 @@ static size_t writeToBuffer(void *pContents, size_t pSize, size_t pNmemb, void *
 static int rxmatch(const char *pString, regmatch_t *result, const char *pPattern);
 static void putLinkIntoList(tMyLinkArray *pList, tMyString *pLink);
 static void copyString(tMyStringArray* pArray, tMyString *pLink);
-static tMyString getLinkFromList(tMyLinkArray *pList, const int idx);
 static void deleteList(tMyLinkArray *pList);
 static void deleteBuffer(tMyString *pString);
 static void processPage(char* pPage, tMyLinkArray* pLinkList);
@@ -159,7 +158,7 @@ static void processPage(char* pPage, tMyLinkArray* pLinkList)
     {
         link.string = &pPage[regRes.rm_so];
         link.size = regRes.rm_eo - regRes.rm_so;
-        putLinkIntoList(pLinkList, &link);
+        putLinkIntoList(pLinkList, &link);// itt kell bemasolni a kozos linkeket tartalmazo tombe
         processPage(&pPage[regRes.rm_eo], pLinkList);
     }
     else
@@ -170,7 +169,7 @@ static void processPage(char* pPage, tMyLinkArray* pLinkList)
 
 static void putLinkIntoList(tMyLinkArray *pList, tMyString *pLink)
 {
-    pList->linkArray = (tMyString* )realloc(pList->linkArray, sizeof(tMyString) * (pList->size + 1u));
+    pList->linkArray = (tMyString* )realloc(pList->linkArray, sizeof(tMyString) * (pList->size + 1u) );
     if(pList->linkArray == NULL)
     {
         printf("Out of memory!\n");
@@ -183,27 +182,15 @@ static void putLinkIntoList(tMyLinkArray *pList, tMyString *pLink)
 
 static void copyString(tMyStringArray* pArray, tMyString *pLink)
 {
-	pArray->stringArrary = (char**)realloc(pArray->stringArrary, sizeof(char*) * ( (pArray->size) + 1u ) );
-	if(pArray->stringArrary == NULL)
-	{
-		printf("Out of memory!\n");
-	}
-	pArray->stringArrary[pArray->size] = (char*)malloc(sizeof(char) * ( (pLink->size) + 1u ) );
-	memcpy(pArray->stringArrary[pArray->size], pLink->string, pLink->size);
-	pArray->stringArrary[pArray->size][pLink->size] = '\0';
-	pArray->size++;
-}
-
-static tMyString getLinkFromList(tMyLinkArray *pList, const int idx)
-{
-    tMyString retVal;
-
-    if(pList != NULL)
+    pArray->stringArrary = (char**)realloc(pArray->stringArrary, sizeof(char*) * ( (pArray->size) + 1u ) );
+    if(pArray->stringArrary == NULL)
     {
-        retVal = pList->linkArray[idx];
+        printf("Out of memory!\n");
     }
-
-    return retVal;
+    pArray->stringArrary[pArray->size] = (char*)malloc(sizeof(char) * ( (pLink->size) + 1u ) );
+    memcpy(pArray->stringArrary[pArray->size], pLink->string, pLink->size);
+    pArray->stringArrary[pArray->size][pLink->size] = '\0';
+    pArray->size++;
 }
 
 static void deleteList(tMyLinkArray *pList)
@@ -243,7 +230,7 @@ static int rxmatch(const char *pString, regmatch_t *result, const char *pPattern
     return retVal;
 }
 
-/* Example program to show how curl can be used. */
+/* Example program */
 int main(int argc, char **argv)
 {
     int deep = 0u;
@@ -281,3 +268,4 @@ int main(int argc, char **argv)
     pthread_exit(NULL);
 }
 /* End of the example program. */
+
