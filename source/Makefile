@@ -1,5 +1,8 @@
 all: cuncurrentWebCrawler.exe
 
+install_curl:
+	../
+
 cuncurrentWebCrawler.exe: cuncurrentWebCrawler.o
 	gcc cuncurrentWebCrawler.o /usr/local/lib/libcurl.a -o cuncurrentWebCrawler.exe
 	echo All done.

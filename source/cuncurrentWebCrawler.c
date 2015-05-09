@@ -11,18 +11,19 @@
 static const char *urlPattern = "http:\/\/?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?";
 
 /* Global variables */
-static tMyList g_listOfLinks;
+static tMyStringArray g_listOfLinks;
 static pthread_mutex_t mutexLinks;
 
 
 /* Static function declarations. */
 static size_t writeToBuffer(void *pContents, size_t pSize, size_t pNmemb, void *pUserp);
 static int rxmatch(const char *pString, regmatch_t *result, const char *pPattern);
-static void putLinkIntoList(tMyList *pList, tMyString *pLink);
-static tMyString getLinkFromList(tMyList *pList, const int idx);
-static void deleteList(tMyList *pList);
+static void putLinkIntoList(tMyLinkArray *pList, tMyString *pLink);
+static void copyString(tMyStringArray* pArray, tMyString *pLink);
+static tMyString getLinkFromList(tMyLinkArray *pList, const int idx);
+static void deleteList(tMyLinkArray *pList);
 static void deleteBuffer(tMyString *pString);
-static void processPage(char* pPage, tMyList* pLinkList);
+static void processPage(char* pPage, tMyLinkArray* pLinkList);
 static int openPage(const char* pPage, tMyString* outBuffer);
 static void webcrawler(void *pThreadData);
 
@@ -33,7 +34,7 @@ static void webcrawler(void *pThreadData)
     pthread_attr_t attr;
 
     tMyString pageBuffer;
-    tMyList listOfLinks;
+    tMyLinkArray listOfLinks;
     int openPageRetVal;
     int idx;
     int rc;
@@ -52,15 +53,15 @@ static void webcrawler(void *pThreadData)
     pageBuffer.size = 0u;
     pageBuffer.string = (char*)malloc( 1u * sizeof(char) );
 
-    listOfLinks.numberOfLinks = 0u;
-    listOfLinks.listOfLinks = (tMyString*)malloc( 1u * sizeof(tMyString) );
+    listOfLinks.size = 0u;
+    listOfLinks.linkArray = (tMyString*)malloc( 1u * sizeof(tMyString) );
 
     openPageRetVal = 0u;
     idx = 0u;
 
     /* Do the work. */
     pthread_mutex_lock (&mutexLinks);
-    putLinkIntoList(&g_listOfLinks, threadData->link);
+    copyString(&g_listOfLinks, threadData->link);
     pthread_mutex_unlock (&mutexLinks);
 
     if( threadData->deep > 0u)
@@ -70,12 +71,12 @@ static void webcrawler(void *pThreadData)
         {
             /* Save all links found in the opened page into list. */
             processPage(pageBuffer.string, &listOfLinks);
-            if( listOfLinks.numberOfLinks > 0u )
+            if( listOfLinks.size > 0u )
             {
                 threadData->deep -= 1u;
-                for( idx = 0u; idx < listOfLinks.numberOfLinks; idx++ )
+                for( idx = 0u; idx < listOfLinks.size; idx++ )
                 {
-                    threadData->link = &(listOfLinks.listOfLinks[idx]);
+                    threadData->link = &(listOfLinks.linkArray[idx]);
                     rc = pthread_create(thread,  &attr, webcrawler, (void *)threadData);
                     if(rc){
                         printf("Error code: %d\n", rc);
@@ -147,7 +148,7 @@ static int openPage(const char* pPage, tMyString* outBuffer)
     return retCode;
 }
 
-static void processPage(char* pPage, tMyList* pLinkList)
+static void processPage(char* pPage, tMyLinkArray* pLinkList)
 {
     int retVal;
     regmatch_t regRes;
@@ -167,40 +168,47 @@ static void processPage(char* pPage, tMyList* pLinkList)
     }
 }
 
-static void putLinkIntoList(tMyList *pList, tMyString *pLink)
+static void putLinkIntoList(tMyLinkArray *pList, tMyString *pLink)
 {
-    pList->listOfLinks = (tMyString* )realloc(pList->listOfLinks, sizeof(tMyString) * (pList->numberOfLinks + 1u));
-    if(pList->listOfLinks == NULL)
+    pList->linkArray = (tMyString* )realloc(pList->linkArray, sizeof(tMyString) * (pList->size + 1u));
+    if(pList->linkArray == NULL)
     {
         printf("Out of memory!\n");
     }
-    pList->listOfLinks[pList->numberOfLinks].string = (char*)malloc(sizeof(char) * pLink->size + 1u);
-    if(pList->listOfLinks[pList->numberOfLinks].string == NULL)
-    {
-        printf("Out of memory!\n");
-    }
-    memcpy(pList->listOfLinks[pList->numberOfLinks].string, pLink->string, pLink->size + 1);
-    pList->listOfLinks[pList->numberOfLinks].string[pLink->size] = '\0';
-    pList->listOfLinks[pList->numberOfLinks].size = pLink->size;
-    pList->numberOfLinks += 1u;
+
+    pList->linkArray[pList->size].string = pLink->string;
+    pList->linkArray[pList->size].size = pLink->size;
+    pList->size++;
 }
 
+static void copyString(tMyStringArray* pArray, tMyString *pLink)
+{
+	pArray->stringArrary = (char**)realloc(pArray->stringArrary, sizeof(char*) * ( (pArray->size) + 1u ) );
+	if(pArray->stringArrary == NULL)
+	{
+		printf("Out of memory!\n");
+	}
+	pArray->stringArrary[pArray->size] = (char*)malloc(sizeof(char) * ( (pLink->size) + 1u ) );
+	memcpy(pArray->stringArrary[pArray->size], pLink->string, pLink->size);
+	pArray->stringArrary[pArray->size][pLink->size] = '\0';
+	pArray->size++;
+}
 
-static tMyString getLinkFromList(tMyList *pList, const int idx)
+static tMyString getLinkFromList(tMyLinkArray *pList, const int idx)
 {
     tMyString retVal;
 
     if(pList != NULL)
     {
-        retVal = pList->listOfLinks[idx];
+        retVal = pList->linkArray[idx];
     }
 
     return retVal;
 }
 
-static void deleteList(tMyList *pList)
+static void deleteList(tMyLinkArray *pList)
 {
-    free(pList->listOfLinks);
+    free(pList->linkArray);
 }
 
 static void deleteBuffer(tMyString *pString)
@@ -256,14 +264,14 @@ int main(int argc, char **argv)
         startData.link = &startURL;
         startData.deep = deep;
 
-        g_listOfLinks.numberOfLinks = 0u;
-        g_listOfLinks.listOfLinks = (tMyString*)malloc( 1u * sizeof(tMyString) );
+        g_listOfLinks.size = 0u;
+        g_listOfLinks.stringArrary = (char**)malloc( 1u * sizeof(char*) );
 
         webcrawler((void*)&startData);
 
-        for(idx = 0u; idx < g_listOfLinks.numberOfLinks; idx++)
+        for(idx = 0u; idx < g_listOfLinks.size; idx++)
         {
-            printf("%d. is: %s\n", idx, g_listOfLinks.listOfLinks[idx].string);
+            printf("%d. is: %s\n", idx, g_listOfLinks.stringArrary[idx]);
         }
     }
 

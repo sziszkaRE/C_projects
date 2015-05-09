@@ -11,20 +11,27 @@
 /* Typedefs*/
 typedef struct tag_myString
 {
-	char *string;
-	size_t size;
+    char *string;
+    size_t size;
 }tMyString;
 
-typedef struct tag_myList
+typedef struct tag_myStringArray
 {
-	tMyString *listOfLinks;
-	size_t numberOfLinks;
-}tMyList;
+    char** stringArrary;
+    size_t size;
+}tMyStringArray;
+
+typedef struct tag_myLinkArray
+{
+    tMyString *linkArray;
+    size_t size;
+}tMyLinkArray;
 
 typedef struct tag_threadData
 {
-	tMyString *link;
-	int deep;
+    tMyString *link;
+    int deep;
 }tThreadData;
 
 #endif /* CONCURRENTWEBCRAWLER_H_ */
+
